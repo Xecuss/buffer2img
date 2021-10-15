@@ -6,6 +6,7 @@ export default defineConfig({
   build: {
     outDir: 'docs'
   },
+  base: './',
   plugins: [svelte()],
   server: {
     port: 5000,
