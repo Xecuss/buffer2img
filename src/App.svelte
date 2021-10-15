@@ -1,5 +1,5 @@
 <script lang="ts">
-import { createArrayBufferURL, createCvs, createCvsDataURL, getImageSize, readFile, wait } from './lib/utils';
+import { createArrayBufferURL, createCvs, createCvsDataURL, cvsDrawImage, getImageSize, readFile, wait } from './lib/utils';
 
 let srcBuffer: ArrayBuffer;
 let srcURL: string = '';
@@ -37,10 +37,11 @@ const drawArray = async (buffer: ArrayBuffer) => {
   targetURL = await createCvsDataURL(cvs);
 }
 
-const decode = () => {
-  const cvs = createCvs();
-  const ctx = cvs.getContext('2d');
+const decode = async () => {
+  const cvs = await cvsDrawImage(srcURL);
   const { height, width } = cvs;
+  const ctx = cvs.getContext('2d');
+
   const { data } = ctx.getImageData(0, 0, width, height);
   const res = [];
   for(let i = 0; i < data.length; i += 4) {

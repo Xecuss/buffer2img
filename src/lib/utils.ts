@@ -19,15 +19,31 @@ export const createArrayBufferURL = (buffer: ArrayBuffer) => {
     return URL.createObjectURL(blob);
 }
 
-export const getImageSize = async (url: string) => {
+interface IImageSize {
+    width: number;
+    height: number;
+    img: HTMLImageElement;
+}
+
+export const getImageSize = async (url: string): Promise<IImageSize> => {
     const img = new Image();
     return new Promise((resolve) => {
         img.src = url;
         img.onload = e => {
             const { height, width } = img;
-            resolve({ height, width });
+            resolve({ height, width, img });
         }
     })
+}
+
+export const cvsDrawImage = async (src: string): Promise<HTMLCanvasElement> => {
+    const cvs = createCvs();
+    const { height, width, img } = await getImageSize(src);
+    cvs.height = height;
+    cvs.width = width;
+    const ctx = cvs.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+    return cvs;
 }
 
 let cvs = null;
