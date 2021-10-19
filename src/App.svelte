@@ -1,13 +1,15 @@
 <script lang="ts">
 import { createArrayBufferURL, createCvs, createCvsDataURL, cvsDrawImage, getImageSize, readFile, wait } from './lib/utils';
+import { zlibSync } from 'fflate';
 
 let srcBuffer: ArrayBuffer;
 let srcURL: string = '';
 let targetURL: string = '';
+let compress: boolean = true;
 
 const drawArray = async (buffer: ArrayBuffer) => {
   const cvs = createCvs();
-  const data = new Uint8Array(buffer);
+  let data = new Uint8Array(buffer);
   const ctx = cvs.getContext('2d');
   const pixCount = Math.floor(data.length / 3) + 1;
   const width = Math.floor(Math.sqrt(pixCount));
@@ -18,8 +20,16 @@ const drawArray = async (buffer: ArrayBuffer) => {
   ctx.clearRect(0, 0, width, height);
   console.log('start draw');
 
+  if(compress) {
+    data = zlibSync(data, { level: 9 });
+  }
+
   for(let i = 0; i < data.length; i += 3) {
     let [r, g, b] = data.slice(i, i + 3);
+    if(b === 0 || b === 0xFF) {
+      b = 0xFF;
+      i--;
+    }
     const colorStr = `rgb(${r}, ${g || 0}, ${b || 0})`;
     const colorOffset = i / 3;
     ctx.fillStyle = colorStr;

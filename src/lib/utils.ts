@@ -56,6 +56,6 @@ export const createCvsDataURL = async (cvs: HTMLCanvasElement): Promise<string> 
     return new Promise(resolve => {
         cvs.toBlob(blob => {
             resolve(URL.createObjectURL(blob));
-        })
+        }, 'image/png', 0.1)
     })
 }
