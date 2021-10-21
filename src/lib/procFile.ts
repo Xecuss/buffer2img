@@ -10,16 +10,43 @@ export default async function procFile(file: File) {
     const zipedData = zlibSync(rawData, { level: 9 });
 }
 
-function createHeader(files: File[]) {
+export function createHeader(files: FileList | File[]) {
     // header由几个整数组成
-    // 1. 版本号 - 目前固定为1
-    // 2. 图片数量 n
     // 3 - n + 3 每张图片的大小
+    const header = [];
+    // 1. 版本号 - 目前固定为1
+    header.push(...int2bits(1));
+    // 2. 图片数量 n
+    header.push(...int2bits(files.length));
+    for(let file of files) {
+        header.push(...int2bits(file.size));
+    }
+    return header;
+}
+
+export function getHeaderNum(arr: number[]) {
+    let current = 0;
+
+    const [offsetVersion, version] = bits2int(arr);
+    current += offsetVersion;
+
+    const [offsetCount, fileNum] = bits2int(arr.slice(current));
+    current += offsetCount;
+
+    const fileSizes = [];
+    let i = 0;
+    while(i < fileNum) {
+        let [thisOffset, fileSize] = bits2int(arr.slice(current));
+        current += thisOffset;
+        fileSizes.push(fileSize);
+        i++;
+    }
+    return { version, fileNum, fileSizes };
 }
 
 function int2bits(length: number) {
     let lengthStr = length.toString(2);
-    const res = [];
+    const res: number[] = [];
     while(lengthStr.length > 0) {
         const currentStr = lengthStr.slice(-7);
         lengthStr = lengthStr.slice(0, -7);
@@ -35,7 +62,9 @@ function int2bits(length: number) {
 
 function bits2int(numArr: number[]) {
     let resStr = '';
+    let bitCount = 0;
     for(let item of numArr) {
+        bitCount++;
         const bits = ('00000000' + item.toString(2)).slice(-8);
         const endBit = bits.slice(-1);
         const dataBits = bits.slice(0, -1);
@@ -44,5 +73,5 @@ function bits2int(numArr: number[]) {
             break;
         }
     }
-    return parseInt(resStr, 2);
+    return [bitCount, parseInt(resStr, 2)];
 }

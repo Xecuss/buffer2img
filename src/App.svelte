@@ -1,6 +1,7 @@
 <script lang="ts">
 import { createArrayBufferURL, createCvs, createCvsDataURL, cvsDrawImage, getImageSize, readFile, wait } from './lib/utils';
 import { zlibSync } from 'fflate';
+import { createHeader } from './lib/procFile';
 
 let srcBuffer: ArrayBuffer;
 let srcURL: string = '';
@@ -74,7 +75,7 @@ const fileChangeHandle = async (e: Event & { currentTarget: HTMLInputElement; })
 
 <main id="main">
   <div class="left block">
-    <input type="file" on:input={fileChangeHandle}>
+    <input type="file" on:input={fileChangeHandle} multiple>
     {#if srcURL}
     <img src={srcURL} alt="原图" class="src-img">
     {/if}
