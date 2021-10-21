@@ -62,8 +62,8 @@ export const createCvsDataURL = async (cvs: HTMLCanvasElement): Promise<string> 
 
 export function uint8arrExSilce(arr: Uint8Array, left: number, right: number) {
     const length = arr.length * 8;
-    let start = left < 0 ? length - left : left;
-    let end = right < 0 ? length - right : right;
+    let start = left < 0 ? length + left : left;
+    let end = right < 0 ? length + right : right;
 
     start = start < 0 ? 0 : start;
     start = start > length ? length : start;
