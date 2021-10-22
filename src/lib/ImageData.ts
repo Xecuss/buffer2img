@@ -1,5 +1,5 @@
 import { zlibSync } from "fflate";
-import { createHeader } from "./procFile";
+import { createHeader, int2bits } from "./procFile";
 import { readFile } from "./utils";
 
 export default class BitArrayImageData {
@@ -29,7 +29,16 @@ export default class BitArrayImageData {
             fullData.set(buf, current);
             current += buf.length;
         });
-        this.data = zlibSync(fullData, { level: 9 });
+
+        const compressedData = zlibSync(fullData, { level: 9 });
+        const lengthData = int2bits(compressedData.length);
+        console.log(lengthData);
+        console.log(compressedData.slice(-8));
+
+        this.data = new Uint8Array(lengthData.length + compressedData.length);
+        this.data.set(lengthData);
+        this.data.set(compressedData, lengthData.length);
+        console.log(this.data.slice(0, 12))
         this.realPixel = Math.floor(this.data.length / 3) + 1;
         this.width = Math.floor(Math.sqrt(this.realPixel));
         this.height = Math.round(Math.floor(this.realPixel / this.width) + 1);
@@ -40,7 +49,7 @@ export default class BitArrayImageData {
         if(x > this.width) {
             throw new Error('out of range');
         }
-        const offset = (y * this.width + x - 1) * 3;
+        const offset = (y * this.width + x) * 3;
         const [r = 0, g = 0, b = 0] = this.data.slice(offset, offset + 3);
         return {r, g, b};
     }

@@ -1,4 +1,4 @@
-import { zlibSync } from "fflate";
+import { zlibSync, unzlibSync } from "fflate";
 import { readFile } from "./utils";
 
 export default async function procFile(file: File) {
@@ -24,7 +24,7 @@ export function createHeader(files: FileList | File[]) {
     return header;
 }
 
-export function getHeaderNum(arr: number[]) {
+export function getHeaderNum(arr: number[] | Uint8Array) {
     let current = 0;
 
     const [offsetVersion, version] = bits2int(arr);
@@ -41,10 +41,15 @@ export function getHeaderNum(arr: number[]) {
         fileSizes.push(fileSize);
         i++;
     }
-    return { version, fileNum, fileSizes };
+    return { 
+        version, 
+        fileNum, 
+        fileSizes,
+        offset: current
+    };
 }
 
-function int2bits(length: number) {
+export function int2bits(length: number) {
     let lengthStr = length.toString(2);
     const res: number[] = [];
     while(lengthStr.length > 0) {
@@ -60,7 +65,7 @@ function int2bits(length: number) {
     return res;
 }
 
-function bits2int(numArr: number[]) {
+export function bits2int(numArr: number[] | Uint8Array) {
     let resStr = '';
     let bitCount = 0;
     for(let item of numArr) {

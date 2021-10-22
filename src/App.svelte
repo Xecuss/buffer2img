@@ -1,12 +1,12 @@
 <script lang="ts">
 import { createArrayBufferURL, createCvs, createCvsDataURL, cvsDrawImage, getImageSize, readFile, wait } from './lib/utils';
-import { zlibSync } from 'fflate';
+import { unzlibSync } from 'fflate';
 import BitArrayImageData from './lib/ImageData';
+import { bits2int, getHeaderNum } from './lib/procFile';
 
 let srcBuffer: ArrayBuffer;
 let srcURL: string = '';
 let targetURL: string = '';
-let compress: boolean = true;
 let imageData = new BitArrayImageData();
 
 const drawArray = async (image: BitArrayImageData) => {
@@ -19,9 +19,10 @@ const drawArray = async (image: BitArrayImageData) => {
   ctx.clearRect(0, 0, width, height);
   console.log('start draw');
 
-  for(let x = 0; x <= width; x++) {
-    for(let y = 0; y <= height; y++) {
+  for(let y = 0; y <= height; y++) {
+    for(let x = 0; x <= width; x++) {
       const { r, g, b } = image.getPixel(x, y);
+      // y == 0 && (console.log([r, g, b]));
       const colorStr = `rgb(${r}, ${g}, ${b})`;
       ctx.fillStyle = colorStr;
       ctx.fillRect(
@@ -47,14 +48,16 @@ const decode = async () => {
   const { data } = ctx.getImageData(0, 0, width, height);
   const res = [];
   for(let i = 0; i < data.length; i += 4) {
-    if(data[i + 3] !== 255) {
-      console.log('interupt!', i);
-      break;
-    }
     res.push(...data.slice(i, i + 3));
   }
-  const uintRes = Uint8Array.from(res);
-  targetURL = createArrayBufferURL(uintRes.buffer);
+  const rawData = Uint8Array.from(res);
+
+  const [offset, length] = bits2int(rawData);
+  const zippedData = rawData.slice(offset, length + offset);
+  const unzippedData = unzlibSync(zippedData);
+  const header = getHeaderNum(unzippedData);
+  const img1 = unzippedData.slice(header.offset, header.fileSizes[0] + header.offset);
+  targetURL = createArrayBufferURL(img1.buffer);
 }
 
 const fileChangeHandle = async (e: Event & { currentTarget: HTMLInputElement; }) => {
