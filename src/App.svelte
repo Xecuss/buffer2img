@@ -1,45 +1,36 @@
 <script lang="ts">
 import { createArrayBufferURL, createCvs, createCvsDataURL, cvsDrawImage, getImageSize, readFile, wait } from './lib/utils';
 import { zlibSync } from 'fflate';
-import { createHeader } from './lib/procFile';
+import BitArrayImageData from './lib/ImageData';
 
 let srcBuffer: ArrayBuffer;
 let srcURL: string = '';
 let targetURL: string = '';
 let compress: boolean = true;
+let imageData = new BitArrayImageData();
 
-const drawArray = async (buffer: ArrayBuffer) => {
+const drawArray = async (image: BitArrayImageData) => {
   const cvs = createCvs();
-  let data = new Uint8Array(buffer);
   const ctx = cvs.getContext('2d');
-  const pixCount = Math.floor(data.length / 3) + 1;
-  const width = Math.floor(Math.sqrt(pixCount));
-  const height = Math.round(Math.floor(pixCount / width) + 1);
+  const { width, height, realPixel } = image;
 
   cvs.width = width;
   cvs.height = height;
   ctx.clearRect(0, 0, width, height);
   console.log('start draw');
 
-  if(compress) {
-    data = zlibSync(data, { level: 9 });
-  }
-
-  for(let i = 0; i < data.length; i += 3) {
-    let [r, g, b] = data.slice(i, i + 3);
-    if(b === 0 || b === 0xFF) {
-      b = 0xFF;
-      i--;
+  for(let x = 0; x <= width; x++) {
+    for(let y = 0; y <= height; y++) {
+      const { r, g, b } = image.getPixel(x, y);
+      const colorStr = `rgb(${r}, ${g}, ${b})`;
+      ctx.fillStyle = colorStr;
+      ctx.fillRect(
+        x, 
+        y,
+        1,
+        1
+      );
     }
-    const colorStr = `rgb(${r}, ${g || 0}, ${b || 0})`;
-    const colorOffset = i / 3;
-    ctx.fillStyle = colorStr;
-    ctx.fillRect(
-      colorOffset % width, 
-      Math.floor(colorOffset / width),
-      1,
-      1
-    );
     // if(colorOffset % 5000 === 0) {
     //   await wait(20);
     // }
@@ -67,9 +58,11 @@ const decode = async () => {
 }
 
 const fileChangeHandle = async (e: Event & { currentTarget: HTMLInputElement; }) => {
-  const file = e.currentTarget.files[0];
+  const files = e.currentTarget.files;
+  const file = files[0];
   srcBuffer = await readFile(file);
   srcURL = createArrayBufferURL(srcBuffer);
+  await imageData.init(files);
 }
 </script>
 
@@ -82,7 +75,7 @@ const fileChangeHandle = async (e: Event & { currentTarget: HTMLInputElement; })
   </div>
   {#if srcURL}
   <div class="operate">
-    <button on:click={() => drawArray(srcBuffer)}>编码</button>
+    <button on:click={() => drawArray(imageData)}>编码</button>
     <button on:click={decode}>解码</button>
   </div>
   {/if}
