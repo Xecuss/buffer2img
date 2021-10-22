@@ -5,8 +5,9 @@ import BitArrayImageData from './lib/ImageData';
 import { bits2int, getHeaderNum } from './lib/procFile';
 
 let srcBuffer: ArrayBuffer;
-let srcURL: string = '';
-let targetURL: string = '';
+let srcURL: string[] = [];
+let targetURL: string[] = [];
+let currentTarget: number = 0;
 let imageData = new BitArrayImageData();
 
 const drawArray = async (image: BitArrayImageData) => {
@@ -37,11 +38,14 @@ const drawArray = async (image: BitArrayImageData) => {
     // }
   }
   console.log('draw finished!')
-  targetURL = await createCvsDataURL(cvs);
+  let url = await createCvsDataURL(cvs);
+  targetURL.push(url);
+  targetURL = targetURL;
+  console.log(targetURL.length);
 }
 
 const decode = async () => {
-  const cvs = await cvsDrawImage(srcURL);
+  const cvs = await cvsDrawImage(srcURL[0]);
   const { height, width } = cvs;
   const ctx = cvs.getContext('2d');
 
@@ -56,15 +60,22 @@ const decode = async () => {
   const zippedData = rawData.slice(offset, length + offset);
   const unzippedData = unzlibSync(zippedData);
   const header = getHeaderNum(unzippedData);
-  const img1 = unzippedData.slice(header.offset, header.fileSizes[0] + header.offset);
-  targetURL = createArrayBufferURL(img1.buffer);
+
+  let current = header.offset;
+  for(let i = 0; i < header.fileNum; i++) {
+    const img = unzippedData.slice(current, header.fileSizes[i] + current);
+    targetURL.push(createArrayBufferURL(img.buffer));
+    current += header.fileSizes[i];
+  }
+  targetURL = targetURL;
 }
 
 const fileChangeHandle = async (e: Event & { currentTarget: HTMLInputElement; }) => {
   const files = e.currentTarget.files;
   const file = files[0];
   srcBuffer = await readFile(file);
-  srcURL = createArrayBufferURL(srcBuffer);
+  srcURL.push(createArrayBufferURL(srcBuffer));
+  srcURL = srcURL;
   await imageData.init(files);
 }
 </script>
@@ -72,8 +83,8 @@ const fileChangeHandle = async (e: Event & { currentTarget: HTMLInputElement; })
 <main id="main">
   <div class="left block">
     <input type="file" on:input={fileChangeHandle} multiple>
-    {#if srcURL}
-    <img src={srcURL} alt="原图" class="src-img">
+    {#if srcURL.length}
+    <img src={srcURL[0]} alt="原图" class="src-img">
     {/if}
   </div>
   {#if srcURL}
@@ -83,9 +94,17 @@ const fileChangeHandle = async (e: Event & { currentTarget: HTMLInputElement; })
   </div>
   {/if}
   <div class="right block">
-    {#if targetURL}
-    <img src={targetURL} alt="结果" class="src-img">
-    <a href={targetURL} download>下载图片</a>
+    {#if targetURL.length}
+    <img src={targetURL[currentTarget]} alt="结果" class="src-img">
+    <a href={targetURL[currentTarget]} download>下载图片</a>
+      {#if currentTarget < targetURL.length}
+        <!-- svelte-ignore a11y-invalid-attribute -->
+        <a href="javascript:void(0);" on:click={() => currentTarget++}>下一张</a>
+      {/if}
+      {#if currentTarget > 0}
+        <!-- svelte-ignore a11y-invalid-attribute -->
+        <a href="javascript:void(0);" on:click={() => currentTarget--}>上一张</a>
+      {/if}
     {/if}
   </div>
 </main>
