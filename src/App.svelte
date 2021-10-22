@@ -24,7 +24,7 @@ const drawArray = async (image: BitArrayImageData) => {
     for(let x = 0; x <= width; x++) {
       const { r, g, b } = image.getPixel(x, y);
       // y == 0 && (console.log([r, g, b]));
-      const colorStr = `rgb(${r}, ${g}, ${b})`;
+      const colorStr = `rgba(${r}, ${g}, ${b}, 255)`;
       ctx.fillStyle = colorStr;
       ctx.fillRect(
         x, 
@@ -50,11 +50,11 @@ const decode = async () => {
   const ctx = cvs.getContext('2d');
 
   const { data } = ctx.getImageData(0, 0, width, height);
-  const res = [];
-  for(let i = 0; i < data.length; i += 4) {
-    res.push(...data.slice(i, i + 3));
-  }
-  const rawData = Uint8Array.from(res);
+  // const res = [];
+  // for(let i = 0; i < data.length; i += 4) {
+  //   res.push(...data.slice(i, i + 3));
+  // }
+  const rawData = Uint8Array.from(data);
 
   const [offset, length] = bits2int(rawData);
   const zippedData = rawData.slice(offset, length + offset);
@@ -70,12 +70,43 @@ const decode = async () => {
   targetURL = targetURL;
 }
 
+const compare = async () => {
+  console.log('compare start!')
+  const cvs = await cvsDrawImage(srcURL[0]);
+  const { height, width } = cvs;
+  const ctx = cvs.getContext('2d');
+
+  const { data: data1 } = ctx.getImageData(0, 0, width, height);
+
+  const cvs2 = await cvsDrawImage(srcURL[1]);
+  const { height: height2, width: width2 } = cvs2;
+  const ctx2 = cvs2.getContext('2d');
+  const { data: data2 } = ctx2.getImageData(0, 0, width2, height2);
+
+  console.log(`${data1.length} - ${data2.length}`);
+  let diffCount = 0;
+  for(let i = 0; i < data1.length; i++) {
+    if(data1[i] !== data2[i]) {
+      console.log(`different in ${i}: ${data1[i]} - ${data2[i]}`);
+      diffCount++;
+    }
+    if(diffCount > 100) {
+      console.log('too many diff! skip');
+      break;
+    }
+  }
+}
+
 const fileChangeHandle = async (e: Event & { currentTarget: HTMLInputElement; }) => {
   const files = e.currentTarget.files;
   const file = files[0];
   srcBuffer = await readFile(file);
   srcURL.push(createArrayBufferURL(srcBuffer));
   srcURL = srcURL;
+  // const file2 = files[1];
+  // const srcBuffer2 = await readFile(file2);
+  // srcURL.push(createArrayBufferURL(srcBuffer2));
+  // srcURL = srcURL;
   await imageData.init(files);
 }
 </script>
@@ -91,6 +122,7 @@ const fileChangeHandle = async (e: Event & { currentTarget: HTMLInputElement; })
   <div class="operate">
     <button on:click={() => drawArray(imageData)}>编码</button>
     <button on:click={decode}>解码</button>
+    <button on:click={compare}>比较</button>
   </div>
   {/if}
   <div class="right block">
